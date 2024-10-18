@@ -1,0 +1,14 @@
+apiVersion: metrics.keptn.sh/v1
+kind: Analysis
+metadata:
+  labels:
+  name: energy-usage
+spec:
+  timeframe:
+    recent: 5m
+  args:
+    ns: fluentbit
+    pod: fluentbit-
+  analysisDefinition:
+    name: energy-usage
+    namespace: fluentbit

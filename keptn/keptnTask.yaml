@@ -1,0 +1,86 @@
+apiVersion: lifecycle.keptn.sh/v1
+kind: KeptnTaskDefinition
+metadata:
+  name: loadtest-task
+  namespace: hipster-shop
+spec:
+  container:
+    name: k6load
+    image: hrexed/k6-onlineboutique:dtoutput
+    imagePullPolicy: Always
+    args: [ "-u", "90", "-d", "40m" ]
+    env:
+      - name: FRONTEND_ADDR
+        value: "frontend.hipster-shop.svc.cluster.local"
+      - name: K6_DYNATRACE_INSECURE_SKIP_TLS_VERIFY
+        value: "true"
+      - name: K6_DYNATRACE_APITOKEN
+        valueFrom:
+          secretKeyRef:
+            name: dynatrace
+            key: dt_api_token
+      - name: K6_DYNATRACE_URL
+        valueFrom:
+          secretKeyRef:
+            name: dynatrace
+            key: dynatrace_oltp_url
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+---
+apiVersion: lifecycle.keptn.sh/v1
+kind: KeptnTaskDefinition
+metadata:
+  name: loadtest-oteldemo-task
+  namespace: otel-demo
+spec:
+  container:
+    name: loadgenerator
+    image: 'ghcr.io/open-telemetry/demo:1.11.1-loadgenerator'
+    imagePullPolicy: IfNotPresent
+    ports:
+      - containerPort: 8089
+        name: service
+    env:
+      - name: OTEL_SERVICE_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.labels['app.kubernetes.io/component']
+      - name: OTEL_COLLECTOR_NAME
+        value: 'fluent-bit.fluentbit.svc.cluster.local'
+      - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+        value: delta
+      - name: LOCUST_WEB_PORT
+        value: "8089"
+      - name: LOCUST_USERS
+        value: "90"
+      - name: LOCUST_RUN_TIME
+        value: "40m"
+      - name: LOCUST_SPAWN_RATE
+        value: "1"
+      - name: LOCUST_HOST
+        value: http://oteldemo.IP_TO_REPLACE.nip.io
+      - name: LOCUST_HEADLESS
+        value: "false"
+      - name: LOCUST_AUTOSTART
+        value: "false"
+      - name: LOCUST_BROWSER_TRAFFIC_ENABLED
+        value: "true"
+      - name: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
+        value: python
+      - name: FLAGD_HOST
+        value: 'opentelemetry-demo-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.11.1
+    resources:
+      limits:
+        memory: 1Gi
